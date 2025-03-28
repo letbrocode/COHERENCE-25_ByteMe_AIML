@@ -1,73 +1,98 @@
-
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { X, Plus } from "lucide-react";
+import { extractKeywordsFromJD } from '../server/api-handler'; 
 
 interface SkillsInputProps {
   initialSkills?: string[];
-  onSkillsChange: (skills: string[]) => void;
+  onSkillsChange: (skills: string[]) => void;   // ✅ Setter function
 }
 
 const SkillsInput = ({ 
   initialSkills = [], 
   onSkillsChange 
 }: SkillsInputProps) => {
-  const [skills, setSkills] = useState<string[]>(initialSkills);
+
+  const [skills, setSkills] = useState<string[]>(Array.isArray(initialSkills) ? initialSkills : []);
   const [currentInput, setCurrentInput] = useState("");
+  const [jdText, setJDText] = useState<string>("");
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter" && currentInput.trim()) {
-      e.preventDefault();
-      addSkill();
-    } else if (e.key === "," && currentInput.trim()) {
-      e.preventDefault();
-      addSkill();
+  // --- Add skill function ---
+  const addSkill = (skill: string) => {
+    const sanitizedSkill = skill.trim().toLowerCase();
+    if (sanitizedSkill && !skills.includes(sanitizedSkill)) {
+      setSkills((prevSkills) => [...prevSkills, sanitizedSkill]);
+      onSkillsChange([...skills, sanitizedSkill]);   // ✅ Trigger parent update
     }
   };
 
-  const addSkill = () => {
-    const sanitizedInput = currentInput.trim().toLowerCase();
-    if (sanitizedInput && !skills.includes(sanitizedInput)) {
-      const updatedSkills = [...skills, sanitizedInput];
-      setSkills(updatedSkills);
-      onSkillsChange(updatedSkills);
-      setCurrentInput("");
-    }
-  };
-
+  // --- Remove skill ---
   const removeSkill = (skillToRemove: string) => {
     const updatedSkills = skills.filter((skill) => skill !== skillToRemove);
     setSkills(updatedSkills);
-    onSkillsChange(updatedSkills);
+    onSkillsChange(updatedSkills);   // ✅ Trigger parent update
   };
 
-  const commonSkills = [
-    "javascript", "python", "java", "react", "angular", 
-    "node.js", "aws", "docker", "kubernetes", "sql"
-  ];
+  // --- Handle JD Analysis ---
+  const handleAnalyzeClick = async () => {
+    if (!jdText.trim()) {
+      console.warn("⚠️ Please enter JD text before analyzing.");
+      return;
+    }
 
-  const handleCommonSkillClick = (skill: string) => {
-    if (!skills.includes(skill)) {
-      const updatedSkills = [...skills, skill];
-      setSkills(updatedSkills);
-      onSkillsChange(updatedSkills);
+    setIsAnalyzing(true);
+
+    try {
+      const keywords = await extractKeywordsFromJD(jdText);
+
+      console.log("Extracted keywords:", keywords);
+
+      // ✅ Automatically add each extracted keyword
+      if (Array.isArray(keywords)) {
+        keywords.forEach((keyword) => addSkill(keyword));
+      }
+
+    } catch (error) {
+      console.error("❌ Failed to analyze JD:", error);
+    } finally {
+      setIsAnalyzing(false);
     }
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
+      
+      {/* --- JD Input --- */}
+      <textarea
+        placeholder="Enter JD here..."
+        value={jdText}
+        onChange={(e) => setJDText(e.target.value)}
+        rows={5}
+        cols={50}
+        className="w-full border rounded-md p-2"
+      />
+
+      <Button 
+        onClick={handleAnalyzeClick} 
+        disabled={isAnalyzing}
+        className="bg-blue-500 text-white"
+      >
+        {isAnalyzing ? "Analyzing..." : "Analyze JD"}
+      </Button>
+
       <div className="flex gap-2">
         <Input
           value={currentInput}
           onChange={(e) => setCurrentInput(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="Type skills and press Enter or comma (,)"
+          onKeyDown={(e) => e.key === "Enter" && addSkill(currentInput)}
+          placeholder="Add skills and press Enter"
           className="flex-1"
         />
         <Button 
-          onClick={addSkill} 
+          onClick={() => addSkill(currentInput)} 
           disabled={!currentInput.trim()}
           size="icon"
         >
@@ -75,6 +100,7 @@ const SkillsInput = ({
         </Button>
       </div>
 
+      {/* ✅ Display extracted and manual skills */}
       <div className="flex flex-wrap gap-2 min-h-[40px]">
         {skills.map((skill) => (
           <Badge key={skill} variant="secondary" className="text-sm">
@@ -94,22 +120,6 @@ const SkillsInput = ({
           No skills added yet. You can add skills by typing above.
         </div>
       )}
-
-      <div className="border-t pt-4">
-        <p className="text-sm font-medium mb-2">Common Skills:</p>
-        <div className="flex flex-wrap gap-2">
-          {commonSkills.map((skill) => (
-            <Badge 
-              key={skill} 
-              variant="outline" 
-              className={`cursor-pointer ${skills.includes(skill) ? 'bg-primary/10' : ''}`}
-              onClick={() => handleCommonSkillClick(skill)}
-            >
-              {skill}
-            </Badge>
-          ))}
-        </div>
-      </div>
     </div>
   );
 };

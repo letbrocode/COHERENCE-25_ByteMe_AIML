@@ -1,9 +1,4 @@
-
-/**
- * This file simulates a backend API handler.
- * In a real application, this would be implemented in a backend server.
- */
-
+import axios from 'axios';
 import { isPdf, mockApiResponse } from "@/lib/utils";
 
 export interface ResumeAnalysisResult {
@@ -14,20 +9,45 @@ export interface ResumeAnalysisResult {
   missingSkills: string[];
 }
 
-// Simulate NLP processing for resume text extraction
+// --- API Base URL ---
+const FLASK_API_URL = 'http://127.0.0.1:5000/api/extract_keywords';
+
+// --- Function to Extract Keywords ---
+export const extractKeywordsFromJD = async (jdText: string): Promise<string[]> => {
+  try {
+    const response = await axios.post(FLASK_API_URL, { jd: jdText });
+
+    if (response.status === 200) {
+      const filteredKeywords = response.data.filtered_keywords || [];
+
+      if (filteredKeywords.length > 0) {
+        console.log('✅ Extracted Keywords:', filteredKeywords);
+        return filteredKeywords;  // ✅ Return the keywords array
+      } else {
+        console.warn('⚠️ No keywords extracted.');
+        return [];
+      }
+    } else {
+      console.error(`❌ Failed to fetch keywords: ${response.status}`);
+      return [];
+    }
+  } catch (error) {
+    console.error('❌ Error extracting keywords:', error);
+    return [];
+  }
+};
+
+// --- Simulate NLP processing for resume text extraction ---
 const extractResumeText = async (file: File): Promise<string> => {
-  // In a real application, we'd use a PDF parser library or API
-  // For this simulation, we'll just return a mock text
+  // Simulate PDF text extraction
   return mockApiResponse(
     "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Experience in JavaScript, React, Node.js, and Python. Proficient in AWS, Docker, and Kubernetes.",
     500
   );
 };
 
-// Simulate NLP processing for skills extraction
+// --- Simulate NLP processing for skills extraction ---
 const extractSkills = async (text: string): Promise<string[]> => {
-  // In a real application, we'd use NLP to extract skills from the text
-  // For this simulation, we'll just return a predefined list of skills
   const mockSkills = [
     "javascript", 
     "react", 
@@ -38,29 +58,28 @@ const extractSkills = async (text: string): Promise<string[]> => {
     "kubernetes"
   ];
   
-  // Add some randomness to make it more realistic
+  // Simulate partial extraction for realism
   return mockApiResponse(
     mockSkills.filter(() => Math.random() > 0.3),
     700
   );
 };
 
-// Simulate NLP processing for candidate name extraction
+// --- Simulate candidate name extraction ---
 const extractCandidateName = async (text: string, fileName: string): Promise<string> => {
-  // In a real application, we'd use NLP to extract the name from the text
-  // For this simulation, we'll generate a name based on the file name
-  let candidateName = fileName.replace(/\.pdf$/i, "");
-  candidateName = candidateName.replace(/(_|-)resume/i, "");
-  candidateName = candidateName.replace(/(_|-)/g, " ");
+  let candidateName = fileName.replace(/\.pdf$/i, "")
+                             .replace(/(_|-)resume/i, "")
+                             .replace(/(_|-)/g, " ");
+
   candidateName = candidateName
     .split(" ")
     .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
     .join(" ");
-  
+
   return mockApiResponse(candidateName, 300);
 };
 
-// Main API handler for resume analysis
+// --- Main Resume Analysis Handler ---
 export const analyzeResume = async (
   file: File,
   requiredSkills: string[]
@@ -69,15 +88,10 @@ export const analyzeResume = async (
     throw new Error("Only PDF files are supported");
   }
 
-  // Extract text from resume
   const text = await extractResumeText(file);
-  
-  // Extract skills from text
   const extractedSkills = await extractSkills(text);
-  
-  // Extract candidate name
   const candidateName = await extractCandidateName(text, file.name);
-  
+
   // Match skills against required skills
   const matchedSkills = requiredSkills.filter(skill => 
     extractedSkills.some(extracted => extracted.toLowerCase() === skill.toLowerCase())
@@ -86,12 +100,11 @@ export const analyzeResume = async (
   const missingSkills = requiredSkills.filter(skill => 
     !extractedSkills.some(extracted => extracted.toLowerCase() === skill.toLowerCase())
   );
-  
-  // Calculate match score
+
   const matchScore = requiredSkills.length > 0
     ? Math.round((matchedSkills.length / requiredSkills.length) * 100)
     : 0;
-  
+
   return {
     candidateName,
     extractedSkills,
