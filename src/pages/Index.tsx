@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import Sidebar from "@/components/Sidebar";
 import { useToast } from "@/components/ui/use-toast";
 import { Loader2, RefreshCw } from "lucide-react";
+import axios from "axios";
 
 // Types
 export interface Resume {
@@ -53,7 +54,7 @@ const Index = () => {
       });
       return;
     }
-
+  
     if (requiredSkills.length === 0) {
       toast({
         title: "No skills specified",
@@ -62,66 +63,52 @@ const Index = () => {
       });
       return;
     }
-
+  
     setLoading(true);
-
-    // Simulate API call delay
-    setTimeout(() => {
-      const mockResumes: Resume[] = files.map((file, index) => {
-        // Generate random skills based on the required skills
-        const allSkills = [
-          "javascript", "react", "node.js", "typescript", "python", "java", "c++", "aws", 
-          "docker", "kubernetes", "mongodb", "sql", "nosql", "redux", "graphql", "rest api",
-          "html", "css", "git", "agile", "scrum", "machine learning", "data analysis"
-        ];
-        
-        // Ensure some of the required skills are matched
-        const extractedSkills = [...new Set([
-          ...requiredSkills.filter(() => Math.random() > 0.3),
-          ...allSkills.filter(() => Math.random() > 0.7)
-        ])];
-        
-        const matchedSkills = requiredSkills.filter(skill => 
-          extractedSkills.includes(skill)
-        );
-        
-        const missingSkills = requiredSkills.filter(skill => 
-          !extractedSkills.includes(skill)
-        );
-        
-        const matchScore = Math.round((matchedSkills.length / requiredSkills.length) * 100);
-        
-        // Extract candidate name from filename
-        let candidateName = file.name.replace(/\.pdf$/i, "");
-        candidateName = candidateName.replace(/(_|-)resume/i, "");
-        candidateName = candidateName.replace(/(_|-)/g, " ");
-        candidateName = candidateName
-          .split(" ")
-          .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-          .join(" ");
-        
-        return {
-          id: Math.random().toString(36).substring(2, 9),
-          fileName: file.name,
-          fileSize: `${(file.size / 1024).toFixed(1)} KB`,
-          candidateName: candidateName || `Candidate ${index + 1}`,
-          skills: extractedSkills,
-          matchScore,
-          matchedSkills,
-          missingSkills
-        };
+  
+    const formData = new FormData();
+    
+    // Match backend keys
+    files.forEach((file) => {
+      formData.append("resumes", file);  // ✅ Use "resumes" to match Flask
+    });
+  
+    formData.append("required_skills", JSON.stringify(requiredSkills));  // ✅ Use "required_skills"
+  
+    try {
+      const response = await axios.post("http://localhost:5000/analyze", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
       });
-
-      setResumes(mockResumes);
-      setActiveTab("results");
-      setLoading(false);
-
+  
+      if (response.status === 200) {
+        setResumes(response.data);
+        setActiveTab("results");
+  
+        toast({
+          title: "Analysis Complete",
+          description: `Successfully analyzed ${files.length} resume(s).`,
+        });
+      } else {
+        toast({
+          title: "Analysis Failed",
+          description: "An error occurred while analyzing resumes.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("API Error:", error);
       toast({
-        title: "Analysis Complete",
-        description: `Successfully analyzed ${files.length} resume(s).`,
+        title: "Error",
+        description: "Failed to connect to the server. Please try again.",
+        variant: "destructive",
       });
-    }, 2000);
+    } finally {
+      setLoading(false);
+    }
   };
+  
+  
+  
 
   const resetAnalysis = () => {
     setFiles([]);
@@ -175,10 +162,9 @@ const Index = () => {
                 <div className="bg-white p-6 rounded-lg shadow-sm">
                   <h2 className="text-xl font-semibold mb-4">Upload Resumes (PDF)</h2>
                   <FileUploadArea 
-                    files={files} 
-                    onFilesChange={handleFileChange} 
-                    onDeleteFile={handleDeleteFile} 
-                  />
+                    files={files}
+                    onFilesChange={handleFileChange}
+                    onDeleteFile={handleDeleteFile} jdSkills={[]}                  />
                 </div>
                 
                 <div className="bg-white p-6 rounded-lg shadow-sm">

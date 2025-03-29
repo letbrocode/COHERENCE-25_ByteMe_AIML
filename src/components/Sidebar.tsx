@@ -34,9 +34,9 @@ const Sidebar = () => {
 
       <nav className="p-4 space-y-2">
         <NavItem icon={<Home size={20} />} label="Dashboard" collapsed={collapsed} active />
-        <NavItem icon={<FileText size={20} />} label="Resumes" collapsed={collapsed} />
+        {/* <NavItem icon={<FileText size={20} />} label="Resumes" collapsed={collapsed} />
         <NavItem icon={<Users size={20} />} label="Candidates" collapsed={collapsed} />
-        <NavItem icon={<Settings size={20} />} label="Settings" collapsed={collapsed} />
+        <NavItem icon={<Settings size={20} />} label="Settings" collapsed={collapsed} /> */}
       </nav>
     </div>
   );

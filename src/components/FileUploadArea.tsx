@@ -1,22 +1,26 @@
-
 import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { X, Upload, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
+import axios from 'axios'; // Make sure to install axios for making API requests
 
 interface FileUploadAreaProps {
   files: File[];
   onFilesChange: (files: File[]) => void;
   onDeleteFile: (index: number) => void;
+  jdSkills: string[]; // Job description skills
 }
 
 const FileUploadArea = ({ 
   files, 
   onFilesChange, 
-  onDeleteFile 
+  onDeleteFile, 
+  jdSkills 
 }: FileUploadAreaProps) => {
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [result, setResult] = useState<any>(null);
 
   const handleDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -62,6 +66,42 @@ const FileUploadArea = ({
     if (fileInputRef.current) {
       fileInputRef.current.click();
     }
+  };
+
+  // Handle the file submission to backend
+  const onAnalyze = async () => {
+    if (files.length === 0) {
+      alert("Please upload at least one file.");
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    const formData = new FormData();
+    files.forEach((file) => {
+      formData.append("resumes", file); // Append the uploaded resumes
+    });
+
+   //api call here
+     try {
+    // Send the FormData to the backend via POST request
+       const response = await axios.post("http://localhost:5000/upload", formData, {
+         headers: {
+           "Content-Type": "multipart/form-data", // Ensure it's sent as FormData
+         },
+       });
+
+    // Handle the response from the backend
+       console.log("Files uploaded successfully:", response.data);
+       alert("Files uploaded successfully!");
+     }catch (error) {
+       console.error("Error uploading files:", error);
+       alert("Error uploading files. Please try again.");
+     } finally {
+       setIsSubmitting(false);
+     }
+      
+
   };
 
   return (
@@ -129,6 +169,19 @@ const FileUploadArea = ({
               </li>
             ))}
           </ul>
+        </div>
+      )}
+
+      <div className="mt-4">
+        <Button onClick={onAnalyze} disabled={isSubmitting}>
+          {isSubmitting ? "Uploading..." : "Upload Resumes"}
+        </Button>
+      </div>
+
+      {result && (
+        <div className="mt-6">
+          <h3 className="text-lg font-medium">Analysis Result</h3>
+          <pre>{JSON.stringify(result, null, 2)}</pre>
         </div>
       )}
     </div>

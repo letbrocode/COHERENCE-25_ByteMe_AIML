@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { X, Plus } from "lucide-react";
 import { extractKeywordsFromJD } from '../server/api-handler'; 
+import axios from "axios";
 
 interface SkillsInputProps {
   initialSkills?: string[];
@@ -80,7 +81,7 @@ const SkillsInput = ({
   disabled={isAnalyzing}
   className="bg-gray-500 text-white px-6 py-2 text-lg rounded-md"
 >
-  {isAnalyzing ? "Analyzing..." : "Analyze JD"}
+  {isAnalyzing ? "Extracting..." : "Extract"}
 </Button>
 
 
